@@ -1,5 +1,7 @@
 <?php
 
+defined("BASEURL") or die("Direct access denied");
+
 /**
  * @name Database query class
  * --------------------------------------------------------------------
@@ -15,19 +17,17 @@
  * @access public
  *
  *
- * 	@see coreModel class for @example on how to instantiate dbQuery. 
+ *  @see coreModel class for @example on how to instantiate dbQuery. 
  * 
  * @uses read dbQuery method documentations to learn how to use each methods.
  * 
  * /--------------------------------------------------------------/
- * / 							  WARNING!                         /
+ * /                              WARNING!                         /
  * /--------------------------------------------------------------/ 
  * /    Before adding a new method, confirm that the query        /
- * /			 you need has not been written already             /
+ * /             you need has not been written already             /
  * /--------------------------------------------------------------/
  **/
-
- require "dbconnect.php";
 
 /**
  * dbQuery
@@ -41,17 +41,16 @@
 class dbQuery
 {
     private $db;
-    private $stmt;
-    private $table;
-    private $result;
-    private $returns;
-    private $bindData;
-    private $logicalType;
-    private $executeType;
-    private $lastInsertId;
-
-
-    /**
+    private $stmt         = ""; // Takes in query strings.
+    private $table        = ""; // Store the current requested table.
+    private $result       = ""; 
+    //private $returns;         // Store in Array fetched values.
+    private $bindData     = []; // Stores in Array data to be bind.
+    private $logicalType  = ""; // stores Logic use in query with LIKE operator
+    private $executeType  = ""; // Takes in the db execution query type @example (INSERT, DELETE, UPDATE);
+    private $lastInsertId = ""; // Stores the last inserted id of user when INSERT query is executed
+    
+    /*
      * dbQuery::__construct()
      * 
      * @return
@@ -60,28 +59,21 @@ class dbQuery
     {
         $this->db = dataBase::getDatabase()->getConnection(); //db Instance (From config/database.php)
 
-        $this->stmt = ""; // Takes in query strings.
-        $this->table = ""; // Store the current requested table.
-       // $this->returns = []; // Store in Array fetched values.
-        $this->bindData = []; // Stores in Array data to be bind.
-        $this->logicalType = ""; // stores Logic use in query with LIKE operator
-        $this->executeType = ""; // Takes in the db execution query type @example (INSERT, DELETE, UPDATE);
-        $this->lastInsertId = ""; // Stores the last inserted id of user when INSERT query is executed
     }
 
     /**
      * @package Select Method
      *-------------------------------------------------------------------------------/
-     * @category: FETCH 															/
-     * @access public 																
-     * @uses: Method gets the columns that is needed in the select query 			/
-     * @param: Parameters expected to be passed in array @see @example				/
-     * @return: return into variable, a query of column selected.					/
+     * @category: FETCH                                                             /
+     * @access public                                                               
+     * @uses: Method gets the columns that is needed in the select query            /
+     * @param: Parameters expected to be passed in array @see @example              /
+     * @return: return into variable, a query of column selected.                   /
      *-------------------------------------------------------------------------------/
-     * @example: $db->select(["column_1, column_2, etc..."]) 						/
-     * @abstract: When no array @param is passed, method selects in wiled card(*)	/
+     * @example: $db->select(["column_1, column_2, etc..."])                        /
+     * @abstract: When no array @param is passed, method selects in wiled card(*)   /
      ********************************************************************************/
-    /**
+    /*
      * dbQuery::select()
      * 
      * @param mixed $columns
@@ -102,7 +94,7 @@ class dbQuery
         return $this;
     }
 
-    public function selectCount(string $column) {
+    public function selectCount($column) {
         $stmt = "SELECT COUNT(".$column.")";
         $this->stmt = $stmt;
         return $this;
@@ -111,21 +103,21 @@ class dbQuery
     /**
      * @package From Method
      *---------------------------------------------------------------/
-     * @category: FETCH. 											/
-     * @access public 												
-     * @uses: Method select the table needed in select query. 		/
-     * @param: Takes in Table name.									/
-     * @return: passes into variable, a query of table selected.		/
+     * @category: FETCH.                                            /
+     * @access public                                               
+     * @uses: Method select the table needed in select query.       /
+     * @param: Takes in Table name.                                 /
+     * @return: passes into variable, a query of table selected.        /
      *---------------------------------------------------------------/
-     * @example: $db->select()->from("table name")->fetch()			/
+     * @example: $db->select()->from("table name")->fetch()         /
      ****************************************************************/
-    /**
+    /*
      * dbQuery::from()
      * 
      * @param mixed $table
      * @return
      */
-    public function from(string $table)
+    public function from($table)
     {
         $stmt = " FROM ";
         $this->stmt .= $stmt . sprintf("%s", $table);
@@ -135,22 +127,22 @@ class dbQuery
     /**
      * @package In Method
      *--------------------------------------------------------------------------------------------------/
-     * @category: FETCH 																			    /
-     * @access public 																					
-     * @uses: Method help in matching multiple values in a single column 								/
-     * @param: Takes two parameter: column_name and in array rows inside the column 					/
+     * @category: FETCH                                                                                 /
+     * @access public                                                                                   
+     * @uses: Method help in matching multiple values in a single column                                /
+     * @param: Takes two parameter: column_name and in array rows inside the column                     /
      * @return: passes into variable, a query containing column name and values to select from column.  /
      *--------------------------------------------------------------------------------------------------/
-     * @example: $db->select()->from->()->in("column_Name", ["var_1, var_2, etc..."])->fetch(); 		/
+     * @example: $db->select()->from->()->in("column_Name", ["var_1, var_2, etc..."])->fetch();         /
      ***************************************************************************************************/
-    /**
+    /*
      * dbQuery::in()
      * 
      * @param mixed $column
      * @param mixed $values
      * @return
      */
-    public function in(string $column, array $values = [])
+    public function in($column, $values = [])
     {
         $stmt = " WHERE $column IN (";
         $values = $this->commaStringPrefix($values);
@@ -161,23 +153,23 @@ class dbQuery
     /**
      * @package where Method
      *---------------------------------------------------------------------------------------------------/
-     * @category FETCH and EXECUTE 																		/
-     * @access public 																					
-     * @uses: Method help in narrowing down a query to a particular column value using a WHERE clause.	/
-     * @param: Takes in an associative array of name of column and the value to limit the query 			/
-     * @return: Send @param to a setData method for binding preparation. 								/
+     * @category FETCH and EXECUTE                                                                      /
+     * @access public                                                                                   
+     * @uses: Method help in narrowing down a query to a particular column value using a WHERE clause.  /
+     * @param: Takes in an associative array of name of column and the value to limit the query             /
+     * @return: Send @param to a setData method for binding preparation.                                /
      *---------------------------------------------------------------------------------------------------/
-     * @example: $db->select()->from()->where(["column_Name"=>value_Name])->fetch();  					/
-     * @example:	$db->saveTo()->where([array_assoc])->execute(); 										/
-     * @abstract: Can be called multiple times when a query require multiple WHERE clauses. 				/
+     * @example: $db->select()->from()->where(["column_Name"=>value_Name])->fetch();                    /
+     * @example:    $db->saveTo()->where([array_assoc])->execute();                                         /
+     * @abstract: Can be called multiple times when a query require multiple WHERE clauses.                 /
      ****************************************************************************************************/
-    /**
+    /*
      * dbQuery::where()
      * 
      * @param mixed $where
      * @return
      */
-    public function where(array $where = [])
+    public function where($where = [])
     {
         $cond = " WHERE ";
         return $this->setData($cond, $where);
@@ -186,24 +178,26 @@ class dbQuery
     /**
      * @package condition(cond) Method
      *---------------------------------------------------------------------------------------------------------------------------/
-     * @category FETCH AND EXECUTE 																								/
-     * @access public 																											
-     * @uses: Method is use in conjunction with where method  when an additional clause is requires like (AND, OR); 				/
-     * @param: Takes two parameters, The condition type and in associative array the column name and the value to limit query 	/
-     * @return: Send to setData method for binding preparation. 																	/
+     * @category FETCH AND EXECUTE                                                                                              /
+     * @access public                                                                                                           
+     * @uses: Method is use in conjunction with where method  when an additional clause is requires like (AND, OR);                 /
+     * @param: Takes two parameters, The condition type and in associative array the column name and the value to limit query   /
+     * @return: Send to setData method for binding preparation.                                                                     /
      *---------------------------------------------------------------------------------------------------------------------------/
-     * @example: $db->select()->from()->where()->cond("cond_type", ["column_NAme"="value"])->fetch(); 							/
-     * @abstract: Can be called multiple times when a query require multiple AND or OR clauses. 									/
+     * @example: $db->select()->from()->where()->cond("cond_type", ["column_NAme"="value"])->fetch();                           /
+     * @abstract: Can be called multiple times when a query require multiple AND or OR clauses.                                     /
      ****************************************************************************************************************************/
-    /**
+    /*
      * dbQuery::cond()
      * 
      * @param mixed $condType
      * @param mixed $columns
      * @return
      */
-    public function cond(string $condType, array $columns = [])
-    {
+    public function cond($condType, $columns = [])
+    { 
+        static $i = 0;
+
         switch (strtoupper($condType))
         {
             case 'AND':
@@ -217,22 +211,33 @@ class dbQuery
                 # code...
                 break;
         }
-        return $this->setData(strtoupper($type), $columns);
+        $new_key = array();
+        $new_value = array();
+        foreach ($columns as $key => $value) {
+            array_push($new_key, $key."_____".$i);
+            array_push($new_value, $value);
+        }
+
+        $data = array_combine($new_key, $new_value);
+
+        ++$i;
+
+        return $this->setData(strtoupper($type), $data);
     }
 
     /**
      * @package Like Method
      *-------------------------------------------------------------------------------------------------------------------/
-     * @category FETCH (search). 																						/
-     * @access public 																									
-     * @uses: Use for search queries 																					/
-     * @param: Takes three parameter: Column to search, what to search and how to match search. 							/
-     * @return: A search query string. 																					/
+     * @category FETCH (search).                                                                                        /
+     * @access public                                                                                                   
+     * @uses: Use for search queries                                                                                    /
+     * @param: Takes three parameter: Column to search, what to search and how to match search.                             /
+     * @return: A search query string.                                                                                  /
      *-------------------------------------------------------------------------------------------------------------------/
-     * @example $db->select()->from()->like("column_Name", ["search_Match"=>"search_Match"], "type")->fetch()			/
+     * @example $db->select()->from()->like("column_Name", ["search_Match"=>"search_Match"], "type")->fetch()           /
      * @abstract @param must be in associative array. When @var $type is left blank, query for 'both' is executed        /
      ********************************************************************************************************************/
-    /**
+    /*
      * dbQuery::like()
      * 
      * @param mixed $column
@@ -240,7 +245,7 @@ class dbQuery
      * @param string $type
      * @return
      */
-    public function like(string $column, array $param, $type = "")
+    public function like($column, $param, $type = "")
     {
         switch ($this->logicalType)
         {
@@ -258,6 +263,7 @@ class dbQuery
         foreach ($param as $key => $keyword)
         {
             $key = sprintf("%s", $key);
+            
             switch (strtolower($type))
             {
                 case 'start':
@@ -283,20 +289,20 @@ class dbQuery
     /**
      * @package Like logical Operator Method 
      * ----------------------------------------------------------------------------------/
-     * @category: FETCH (Like Method) 													/
-     * @access public 																	
-     * @uses Must only be use with like Method when additional condition is requires.	/
-     * @param: Take logical operator type 												/
+     * @category: FETCH (Like Method)                                                   /
+     * @access public                                                                   
+     * @uses Must only be use with like Method when additional condition is requires.   /
+     * @param: Take logical operator type                                               /
      *-----------------------------------------------------------------------------------/
-     * @example $db->select()->like()->logicalOpt($type)->like()->fetch();    			/
+     * @example $db->select()->like()->logicalOpt($type)->like()->fetch();              /
      ************************************************************************************/
-    /**
+    /*
      * dbQuery::logicalOpt()
      * 
      * @param mixed $type
      * @return
      */
-    public function logicalOpt(string $type)
+    public function logicalOpt($type)
     {
         switch (strtoupper($type))
         {
@@ -322,22 +328,22 @@ class dbQuery
     /**
      * @package natural join Method
      *------------------------------------------------------------------------------/
-     * @category: FETCH.	(Joining Tables).										   /
-     * @access public															   
+     * @category: FETCH.    (Joining Tables).                                          /
+     * @access public                                                              
      * @uses Method is use when joining two or more tables using NATURAL JOIN       /
-     * @param: Takes table name only.											   /
+     * @param: Takes table name only.                                              /
      *------------------------------------------------------------------------------/
      * @example $db->select()->from()->nJoin(table_Name)->fetch()                   /
      * @abstract To specify column when Natural joining, use Where Method           /
-     * 	@example ....->nJoin()->where()->fetch(); 								   /
+     *  @example ....->nJoin()->where()->fetch();                                  /
      *******************************************************************************/
-    /**
+    /*
      * dbQuery::nJoin()
      * 
      * @param mixed $table
      * @return
      */
-    public function nJoin(string $table)
+    public function nJoin($table)
     {
         $stmt = " NATURAL JOIN " . sprintf("%s", $table);
         $this->stmt .= $stmt;
@@ -347,23 +353,23 @@ class dbQuery
     /**
      * @package Join Method
      *------------------------------------------------------------------------------------------/
-     * @category: FETCH.	(Joining Tables).										               /
-     * @access public															               
+     * @category: FETCH.    (Joining Tables).                                                      /
+     * @access public                                                                          
      * @uses Method is use when joining two or more tables using any type of join               /
-     * @param: Takes in array table name and the type of join     				      		   /
+     * @param: Takes in array table name and the type of join                                  /
      *------------------------------------------------------------------------------------------/
      * @example $db->select()->from()->Join([table_Name, etc..], "join_Type")->on()->fetch()    /
      * @abstract types of join: (JOIN or (INNER JOIN), LEFT JOIN, RIGHT JOIN, FULL OUTER JOIN)  /
-     * 	Also join Method must be use with (on method) as @see in the example				   /
+     *  Also join Method must be use with (on method) as @see in the example                   /
      *******************************************************************************************/
-    /**
+    /*
      * dbQuery::join()
      * 
      * @param mixed $table
      * @param mixed $jointype
      * @return
      */
-    public function join(array $table, string $jointype)
+    public function join($table, $jointype)
     {
         $stmt = " " . strtoupper($jointype) . " ";
         $stmt .= $this->commaPrefix($table);
@@ -374,22 +380,22 @@ class dbQuery
     /**
      * @package On Method
      *------------------------------------------------------------------------------------------/
-     * @category: FETCH (Joining Tables).													   /
-     * @access public																		   
+     * @category: FETCH (Joining Tables).                                                      /
+     * @access public                                                                          
      * @uses: Method is use in conjuction with Join method to specify the joint connection.     /
-     * @param: Takes two parameters; The two table column connections.						   /
+     * @param: Takes two parameters; The two table column connections.                         /
      *------------------------------------------------------------------------------------------/
-     * @example: $db->select()->from()->join()->on(table1.column1, table2.column2)->fetch()	   /
+     * @example: $db->select()->from()->join()->on(table1.column1, table2.column2)->fetch()    /
      * @abstract: On Method can never be used without calling (join method) as @see in example  /
      *******************************************************************************************/
-    /**
+    /*
      * dbQuery::on()
      * 
      * @param mixed $cond1
      * @param mixed $cond2
      * @return
      */
-    public function on(string $cond1, string $cond2)
+    public function on($cond1, $cond2)
     {
         $stmt = " ON ";
         $stmt .= sprintf("%s", $cond1) . "=" . sprintf("%s", $cond2);
@@ -409,14 +415,14 @@ class dbQuery
      * @example: $db->select()->from()->orderBy->(columName, "ASC")->fetch();                                             /
      * @abstract: This method can be use in any fetch query and must be added just before fetch method as @see in example / 
      **********************************************************************************************************************/
-    /**
+    /*
      * dbQuery::orderBy()
      * 
      * @param mixed $order
      * @param string $orderType
      * @return
      */
-    public function orderBy(string $order, $orderType = "")
+    public function orderBy($order, $orderType = "")
     {
         $stmt = " ORDER BY ";
 
@@ -447,7 +453,7 @@ class dbQuery
      * @example: $db->select()->from()->limit(2, 3)->fetch()                      /
      * @abstract: Method can also be used in conjuction with other fetch queries  /
      *****************************************************************************/
-    /**
+    /*
      * dbQuery::limit()
      * 
      * @param mixed $min
@@ -473,7 +479,7 @@ class dbQuery
      * @example $db->saveInto(tableName, ["columnName2"=>$data1, "columnName2"=>data2], "UPDATE")->exectue()      /
      * @abstract: When runing an INSERT, Alwas prefix the array keys with(:) as @see in example                   /
      *************************************************************************************************************/
-    /**
+    /*
      * dbQuery::saveInto()
      * 
      * @param mixed $table
@@ -481,11 +487,20 @@ class dbQuery
      * @param mixed $type
      * @return
      */
-    public function saveInto(string $table, array $data, string $type)
+    public function saveInto($type,$table,$data)
     {
         $this->table = sprintf("%s", $table);
         $this->executeType = strtoupper($type);
+        $this->stmt = "";
 
+        if($this->executeType === "INSERT") {
+        
+            foreach($data as $key => $value) {
+               $key = preg_replace("/^:/", "", $key);
+               $this->insertColums[] = $key;
+            }
+        }
+         
         return $this->setData("", $data);
     }
 
@@ -500,13 +515,13 @@ class dbQuery
      * -------------------------------------------------------/
      * @example: $db->delete(tableName)->where()->exectue()   /
      *********************************************************/
-    /**
+    /*
      * dbQuery::delete()
      * 
      * @param mixed $table
      * @return
      */
-    public function delete(string $table)
+    public function delete($table)
     {
         $this->executeType = "DELETE";
         $stmt = "DELETE FROM $table";
@@ -525,7 +540,7 @@ class dbQuery
      * @example: $db->select()->from->()->fetch(FALSE, FALSE)    /
      * @abstract:
      ************************************************************/
-    /**
+    /*
      * dbQuery::fetch()
      * 
      * @param bool $fetchType
@@ -538,17 +553,18 @@ class dbQuery
         $dataArray = [];
 
         $fetch = "fetch";
-        if ($fetchType == true)
-        {
+        if ($fetchType == true) {
             $fetch = "fetchAll";
         }
 
         try
         {
             $this->result = $this->db->prepare($this->stmt);
+           
             unset($this->stmt); // Clear query statements
 
-            if ($this->bindData)
+            
+            if (isset($this->bindData))
             {
                 $dataArray = $this->bindData;
                 unset($this->bindData); // clear bind data values
@@ -557,25 +573,28 @@ class dbQuery
             {
                 $this->bind($key, $value);
             }
-    
+           
             $this->result->execute();
 
             if ($arrayType == true) {
                 while ($row = $this->result->$fetch(PDO::FETCH_NUM)) {
-                    array_push($returnData, $row);
+                   array_push($returnData, $row);
                 }
-                $result = $returnData;
             }
              else {
                 while ($row = $this->result->$fetch()) {
                     array_push($returnData, $row);
                 }
-                $result = $returnData;
             }
-            return $result;
+
+            $result = $returnData;
 
             unset($returnData); // clear return data
             unset($this->result); // Clear Results data
+
+            return $result;
+
+           
         }
         catch (PDOException $e)
         {
@@ -591,7 +610,7 @@ class dbQuery
      * @uses: Use ro execute all none fetch queries.           /
      * @param: takes in two boolen parameters as optional      /
      **********************************************************/
-    /**
+    /*
      * dbQuery::execute()
      * 
      * @return
@@ -601,17 +620,15 @@ class dbQuery
         $data = $this->commaPrefix(array_keys($this->bindData));
         $dataArray = [];
 
-        try
-        {
             switch ($this->executeType)
             {
-                case "INSERT":
-                    $this->result = $this->db->prepare("INSERT INTO " . $this->table . " VALUES($data)");
+                case "INSERT":               
+                    $this->result = $this->db->prepare("INSERT INTO " . $this->table . " (" . $this->commaPreFix($this->insertColums). ") VALUES($data)");
+                    unset($this->insertColums);
                     break;
 
                 case "UPDATE":
-                    $this->result = $this->db->prepare("UPDATE " . $this->table . " SET " . $this->
-                        stmt . "");
+                    $this->result = $this->db->prepare("UPDATE " . $this->table . " SET " . $this->stmt . "");
                     break;
 
                 case "DELETE":
@@ -638,19 +655,17 @@ class dbQuery
 
             $this->result->execute();
 
+
             unset($this->result); // Clear Results data
 
-            if ($this->executeType == "INSERT")
+            if ($this->executeType == "INSERT") {
                 $this->lastInsertId = $this->db->lastInsertId();
-        }
-        catch (PDOException $e)
-        {
-            die("Error! " . $e->getMessage());
-        }
+            }
+
     }
 
     // Get Last insert id
-    /**
+    /*
      * dbQuery::getLastInsertId()
      * 
      * @return
@@ -664,14 +679,27 @@ class dbQuery
         }
     }
 
+    public function t_begin() {
+        return $this->db->beginTransaction();
+    }
+
+    public function t_commit() {
+        return $this->db->commit();
+    }
+
+    public function t_rollback() {
+        return $this->db->rollBack();
+    }
+
+
     // Truncate table (Empty table details)
-    /**
+    /*
      * dbQuery::truncate()
      * 
      * @param mixed $table
      * @return
      */
-    public function truncate(string $table)
+    public function truncate($table)
     {
         $stmt = "TRUNCATE " . sprintf("%s", $table);
         $this->stmt = $stmt;
@@ -679,7 +707,7 @@ class dbQuery
     }
 
     // View query.
-    /**
+    /*
      * dbQuery::viewQuery()
      * 
      * @return
@@ -690,42 +718,61 @@ class dbQuery
     }
 
     // Set data for prepared statements
-    /**
+    /*
      * dbQuery::setData()
      * 
      * @param mixed $cond
      * @param mixed $data
      * @return
      */
-    private function setData(string $cond, array $data)
+    private function setData($cond, $data)
     {
+       
         foreach ($data as $key => $value)
         {
-            $key = sprintf("%s", $key);
+
+            if (preg_match("/(_____\d+)$/", $key)) {
+                $key1 = preg_replace("/(_____\d+)$/", "", $key);
+            } else {
+                $key1 = sprintf("%s", $key);
+            }
+
+            $key2 = explode(".", $key);
+
+            if (isset($key2[1])) {
+                $key2 = $key2[1];
+            } else {
+                $key2 = $key2[0];
+            }
+
             $var = sprintf("%s", $value);
-            $this->bindData[$key] = $var;
-            $this->stmt .= $cond . $key . "=:" . $key . ",";
+            
+            
+            $this->bindData[$key2] = $var;
+            $this->stmt .= $cond . $key1 . "=:" . $key2 . ","; 
+
+           
         }
+        
         $this->stmt = rtrim($this->stmt, ",");
         return $this;
     }
 
     //BIND
-    /**
+    /*
      * dbQuery::bind()
      * 
      * @param mixed $placeholder
      * @param mixed $value
      * @return
      */
-    private function bind(string $placeholder, string $value)
+    private function bind($placeholder, $value)
     {
-        return $this->result->bindValue($placeholder, sprintf("%s", $value), PDO::
-            PARAM_STR);
+        return $this->result->bindValue($placeholder, sprintf("%s", $value), PDO::PARAM_STR);
     }
 
     //Prefix all parameter array with comma
-    /**
+    /*
      * dbQuery::commaPrefix()
      * 
      * @param mixed $values
@@ -737,7 +784,7 @@ class dbQuery
         return $params;
     }
 
-    /**
+    /*
      * dbQuery::commaStringPrefix()
      * 
      * @param mixed $values
