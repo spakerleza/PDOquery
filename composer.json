@@ -1,0 +1,17 @@
+"repositories": [
+    {
+        "type":"package",
+        "package": {
+          "name": "spakerleza/PDOquery",
+          "version":"master",
+          "source": {
+              "url": "https://github.com/spakerleza/PDOquery.git",
+              "type": "git",
+              "reference":"master"
+            }
+        }
+    }
+],
+"require": {
+    "spakerleza/PDOquery": "master"
+}
