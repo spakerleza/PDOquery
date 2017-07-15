@@ -1,6 +1,6 @@
 <?php
 
-defined("BASEURL") or die("Direct access denied");
+require "dbconnect.php";
 
 /**
  * @name Database query class
