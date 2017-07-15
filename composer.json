@@ -14,6 +14,6 @@
         }
     ],
     "require": {
-        "spakerleza/PDOquery": "master"
+        "spakerleza/PDOquery": "~2.3"
     }
 }
