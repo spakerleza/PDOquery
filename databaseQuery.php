@@ -691,21 +691,6 @@ class dbQuery
         return $this->db->rollBack();
     }
 
-
-    // Truncate table (Empty table details)
-    /*
-     * dbQuery::truncate()
-     * 
-     * @param mixed $table
-     * @return
-     */
-    public function truncate($table)
-    {
-        $stmt = "TRUNCATE " . sprintf("%s", $table);
-        $this->stmt = $stmt;
-        return $this;
-    }
-
     // View query.
     /*
      * dbQuery::viewQuery()
